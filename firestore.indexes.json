@@ -1,0 +1,19 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "companies",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "subscription.expiryNotificationSentAt",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "subscription.endsAt",
+          "order": "ASCENDING"
+        }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}
