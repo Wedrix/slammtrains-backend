@@ -9,27 +9,31 @@ admin.initializeApp(functions.config().firebase);
 import setAdmin from './Services/setAdmin';
 import signUpHR from './Services/signUpHR';
 import registerCompany from './Services/registerCompany';
-import addEmployee from './Services/addEmployee';
+import addCompanyEmployee from './Services/addCompanyEmployee';
 import importEmployees from './Services/importEmployees';
-import removeEmployee from './Services/removeEmployee';
+import removeCompanyEmployee from './Services/removeCompanyEmployee';
 import processPaystackEvents from './processPaystackEvents';
 import addPlan from './Services/addPlan';
 import addCourse from './Services/addCourse';
 import addDraftCourse from './Services/addDraftCourse';
 import setCustomPlanForCompany from './Services/setCustomPlanForCompany';
-import setPlanForCompany from './Services/setPlanForCompany';
+import setCompanyPlan from './Services/setCompanyPlan';
 import sendSubscriptionReminders from './Services/sendSubscriptionReminders';
 import blockAccessForCompaniesWithExpiredSubscriptions from './Services/blockAccessForCompaniesWithExpiredSubscriptions';
+import addEmployeeTestScore from './Services/addEmployeeTestScore';
+import addEmployeeCompletedLesson from './Services/addEmployeeCompletedLesson';
 
 import * as Schema from 'zod';
-import { EmployeeData, PlanData, CompanyData, HRData, CourseData, DraftCourseData } from './Schema/Data';
+import * as ResolveDocuments from './Helpers/ResolveDocuments';
+
+import { EmployeeData, PlanData, CompanyData, HRData, CourseData, DraftCourseData, CompletedLessonData, TestScoreData } from './Schema/Data';
 
 interface Auth {
     uid: string;
     token: admin.auth.DecodedIdToken;
 };
 
-const authorizeRequestForHR = async (auth: Auth | undefined) => {
+const authorizeRequest = async (auth: Auth | undefined, accessLevel: string) => {
     if (!auth) {
         throw new functions.https.HttpsError('permission-denied', 'You are not authorized to call this function');
     }
@@ -41,54 +45,71 @@ const authorizeRequestForHR = async (auth: Auth | undefined) => {
         throw new functions.https.HttpsError('permission-denied', 'You are not authorized to call this function');     
     }
 
-    if (customClaims.accessLevel !== 'hr') {
+    if (customClaims.accessLevel !== accessLevel) {
         throw new functions.https.HttpsError('permission-denied', 'You are not authroized to call this function');
     }
 };
 
-const authorizeRequestForAdmin = async (auth: Auth | undefined) => {
-    if (!auth) {
-        throw new functions.https.HttpsError('permission-denied', 'You are not authorized to call this function');
-    }
-
-    const authUserRecord = await admin.auth().getUser(auth.uid);
-    const customClaims = authUserRecord.customClaims; 
-
-    if (!customClaims) {
-        throw new functions.https.HttpsError('permission-denied', 'You are not authorized to call this function');     
-    }
-
-    if (customClaims.accessLevel !== 'admin') {
-        throw new functions.https.HttpsError('permission-denied', 'You are not authroized to call this function');
-    }
-};
-
-const resolveCompanyIdForHR = async (auth: Auth | undefined) => {
+const resolveCompanyForHr = async (auth: Auth | undefined) => {
     if (!auth) {
         throw new functions.https.HttpsError('permission-denied', 'You are not authorized to call this function');
     }
 
     const uid = auth.uid;
 
-    const companyId = await admin.firestore()
-                                .collection('companies')
-                                .where('hr.uid','==',uid)
-                                .select()
-                                .get()
-                                .then(documentsSnapshot => {
-                                    const document = documentsSnapshot.docs[0];
+    const companyDocumentReference = await admin.firestore()
+                                                .collection('companies')
+                                                .where('hr.uid','==',uid)
+                                                .select()
+                                                .get()
+                                                .then(documentsSnapshot => {
+                                                    const document = documentsSnapshot.docs[0];
 
-                                    if (!document) {
-                                        throw new functions.https.HttpsError('failed-precondition', 'Kindly register a company on your account to proceed');
-                                    }
+                                                    if (!document) {
+                                                        throw new functions.https.HttpsError('failed-precondition', 'There is no company associated with this user');
+                                                    }
 
-                                    return document.id;
-                                })
-                                .catch(error => {
-                                    throw new functions.https.HttpsError('internal', 'Error resolving company Id from request', error);
-                                });
+                                                    return document.ref;
+                                                })
+                                                .catch(error => {
+                                                    throw new functions.https.HttpsError('internal', 'Error resolving company', error);
+                                                });
 
-    return companyId;
+    return ResolveDocuments.resolveCompany(companyDocumentReference)
+                            .catch(error => {
+                                throw new functions.https.HttpsError('internal', 'Error resolving company', error);
+                            });
+};
+
+const resolveEmployee = async (auth: Auth | undefined) => {
+    if (!auth) {
+        throw new functions.https.HttpsError('permission-denied', 'You are not authorized to call this function');
+    }
+
+    const uid = auth.uid;
+
+    const employeeDocumentReference = await admin.firestore()
+                                                .collectionGroup('employees')
+                                                .where('uid','==',uid)
+                                                .select()
+                                                .get()
+                                                .then(documentsSnapshot => {
+                                                    const document = documentsSnapshot.docs[0];
+
+                                                    if (!document) {
+                                                        throw new functions.https.HttpsError('failed-precondition', 'There is no account associated with this user');
+                                                    }
+
+                                                    return document.ref;
+                                                })
+                                                .catch(error => {
+                                                    throw new functions.https.HttpsError('internal', 'Error resolving employee', error);
+                                                });
+
+    return ResolveDocuments.resolveEmployee(employeeDocumentReference)
+                            .catch(error => {
+                                throw new functions.https.HttpsError('internal', 'Error resolving employee', error);
+                            });
 };
 
 exports.setAdmin = functions.https.onCall(async () => {
@@ -105,7 +126,7 @@ exports.signUpHR = functions.https.onCall(async data => {
 });
 
 exports.registerCompany = functions.https.onCall(async (data, context) => {
-    await authorizeRequestForHR(context.auth);
+    await authorizeRequest(context.auth, 'hr');
     
     if (context.auth) {
         const uid = context.auth.uid;
@@ -119,23 +140,23 @@ exports.registerCompany = functions.https.onCall(async (data, context) => {
     }
 });
 
-exports.addEmployee = functions.https.onCall(async (data, context) => {
-    await authorizeRequestForHR(context.auth);
+exports.addCompanyEmployee = functions.https.onCall(async (data, context) => {
+    await authorizeRequest(context.auth, 'hr');
 
-    const companyId = await resolveCompanyIdForHR(context.auth);
+    const company = await resolveCompanyForHr(context.auth);
 
     const employeeData = await EmployeeData.parseAsync(data.employeeData)
                                             .catch(error => {
                                                 throw new functions.https.HttpsError('invalid-argument', 'The employee data is invalid', error);
                                             });
 
-    await addEmployee(employeeData, companyId);
+    await addCompanyEmployee(company, employeeData);
 });
 
-exports.removeEmployee = functions.https.onCall(async (data, context) => {
-    await authorizeRequestForHR(context.auth);
+exports.removeCompanyEmployee = functions.https.onCall(async (data, context) => {
+    await authorizeRequest(context.auth, 'hr');
 
-    const companyId = await resolveCompanyIdForHR(context.auth);
+    const company = await resolveCompanyForHr(context.auth);
 
     const employeeId = await Schema.string()
                                     .parseAsync(data.employeeId)
@@ -143,13 +164,13 @@ exports.removeEmployee = functions.https.onCall(async (data, context) => {
                                         throw new functions.https.HttpsError('invalid-argument', 'The employee Id is invalid', error);
                                     });
 
-    await removeEmployee(employeeId, companyId);
+    await removeCompanyEmployee(company, employeeId);
 });
 
-exports.setPlanForCompany = functions.https.onCall(async (data, context) => {
-    await authorizeRequestForHR(context.auth);
+exports.setCompanyPlan = functions.https.onCall(async (data, context) => {
+    await authorizeRequest(context.auth, 'hr');
 
-    const companyId = await resolveCompanyIdForHR(context.auth);
+    const company = await resolveCompanyForHr(context.auth);
 
     const planId = await Schema.string()
                                 .parseAsync(data.planId)
@@ -157,11 +178,11 @@ exports.setPlanForCompany = functions.https.onCall(async (data, context) => {
                                     throw new functions.https.HttpsError('invalid-argument', 'The plan Id is invalid', error);
                                 });
 
-    await setPlanForCompany(planId, companyId);
+    await setCompanyPlan(company, planId);
 });
 
 exports.addPlan = functions.https.onCall(async (data, context) => {
-    await authorizeRequestForAdmin(context.auth);
+    await authorizeRequest(context.auth, 'admin');
 
     const planData = await PlanData.parseAsync(data.planData)
                                     .catch(error => {
@@ -171,8 +192,8 @@ exports.addPlan = functions.https.onCall(async (data, context) => {
     await addPlan(planData);
 });
 
-exports.setCustomPlanForCompany = functions.https.onCall(async (data, context) => {
-    await authorizeRequestForAdmin(context.auth);
+exports.setCompanyCustomPlan = functions.https.onCall(async (data, context) => {
+    await authorizeRequest(context.auth, 'admin');
 
     const planData = await PlanData.parseAsync(data.planData)
                                     .catch(error => {
@@ -189,7 +210,7 @@ exports.setCustomPlanForCompany = functions.https.onCall(async (data, context) =
 });
 
 exports.addCourse = functions.https.onCall(async (data, context) => {
-    await authorizeRequestForAdmin(context.auth);
+    await authorizeRequest(context.auth, 'admin');
 
     const courseData = await CourseData.parseAsync(data.courseData)
                                         .catch(error => {
@@ -200,14 +221,40 @@ exports.addCourse = functions.https.onCall(async (data, context) => {
 });
 
 exports.addDraftCourse = functions.https.onCall(async (data, context) => {
-    await authorizeRequestForAdmin(context.auth);
+    await authorizeRequest(context.auth, 'admin');
 
     const draftCourseData = await DraftCourseData.parseAsync(data.draftCourseData)
-                                        .catch(error => {
-                                            throw new functions.https.HttpsError('invalid-argument', 'The draft course data is invalid', error);
-                                        });
+                                                .catch(error => {
+                                                    throw new functions.https.HttpsError('invalid-argument', 'The draft course data is invalid', error);
+                                                });
 
     await addDraftCourse(draftCourseData);
+});
+
+exports.addEmployeeCompletedLesson = functions.https.onCall(async (data, context) => {
+    await authorizeRequest(context.auth, 'employee');
+
+    const employee = await resolveEmployee(context.auth);
+
+    const completedLessonData = await CompletedLessonData.parseAsync(data.completedLesson)
+                                                        .catch(error => {
+                                                            throw new functions.https.HttpsError('invalid-argument', 'The completed lesson data is invalid', error);
+                                                        });
+
+    await addEmployeeCompletedLesson(employee, completedLessonData);
+});
+
+exports.addEmployeeTestScore = functions.https.onCall(async (data, context) => {
+    await authorizeRequest(context.auth, 'employee');
+
+    const employee = await resolveEmployee(context.auth);
+
+    const testScoreData = await TestScoreData.parseAsync(data.testScore)
+                                                        .catch(error => {
+                                                            throw new functions.https.HttpsError('invalid-argument', 'The test score data is invalid', error);
+                                                        });
+
+    await addEmployeeTestScore(employee, testScoreData);
 });
 
 exports.importEmployeesOnCSVUpload = functions.storage.object().onFinalize(async object => {
@@ -249,33 +296,82 @@ exports.importEmployeesOnCSVUpload = functions.storage.object().onFinalize(async
 exports.processPaystackEvents = functions.https.onRequest(processPaystackEvents);
 
 exports.sendSubscriptionRemindersEveryTenMinutes = functions.pubsub
-                                                        .schedule('every 10 minutes from 03:00 to 07:00')
-                                                        .onRun(async (context) => {
-                                                            await sendSubscriptionReminders();
-                                                        });
+                                                            .schedule('every 10 minutes from 03:00 to 07:00')
+                                                            .onRun(async (context) => {
+                                                                await sendSubscriptionReminders();
+                                                            });
 
 exports.blockAccessForCompaniesWithExpiredSubscriptionsEveryTenMinutes = functions.pubsub
-                                                                            .schedule('every 10 minutes from 03:00 to 07:00')
-                                                                            .onRun(async (context) => {
-                                                                                await blockAccessForCompaniesWithExpiredSubscriptions();
-                                                                            });
+                                                                                .schedule('every 10 minutes from 03:00 to 07:00')
+                                                                                .onRun(async (context) => {
+                                                                                    await blockAccessForCompaniesWithExpiredSubscriptions();
+                                                                                });
 
 exports.incrementEmployeesTotalCountOnCreate = functions.firestore
-                                                    .document(`/companies/{companyId}/employees/{employeeId}`)
-                                                    .onCreate(async (documentSnapshot, context) => {
-                                                        const companyId = context.params.companyId;
+                                                        .document(`/companies/{companyId}/employees/{employeeId}`)
+                                                        .onCreate(async (documentSnapshot, context) => {
+                                                            const companyId = context.params.companyId;
 
-                                                        await admin.firestore()
-                                                                .doc(`companies/${companyId}`)
-                                                                .update('employeesTotalCount', admin.firestore.FieldValue.increment(1));
-                                                    });
+                                                            await admin.firestore()
+                                                                    .doc(`companies/${companyId}`)
+                                                                    .update('employeesTotalCount', admin.firestore.FieldValue.increment(1));
+                                                        });
 
 exports.decrementEmployeesTotalCountOnDelete = functions.firestore
-                                                    .document(`/companies/{companyId}/employees/{employeeId}`)
-                                                    .onDelete(async (documentSnapshot, context) => {
-                                                        const companyId = context.params.companyId;
+                                                        .document(`/companies/{companyId}/employees/{employeeId}`)
+                                                        .onDelete(async (documentSnapshot, context) => {
+                                                            const companyId = context.params.companyId;
 
+                                                            await admin.firestore()
+                                                                    .doc(`companies/${companyId}`)
+                                                                    .update('employeesTotalCount', admin.firestore.FieldValue.increment(-1));
+                                                        });
+
+exports.incrementCompaniesTotalCountOnCreate = functions.firestore
+                                                        .document(`/companies/{companyId}`)
+                                                        .onCreate(async () => {
+                                                            await admin.firestore()
+                                                                    .doc(`__documentCounters/companies`)
+                                                                    .update('totalCount', admin.firestore.FieldValue.increment(1));
+                                                        });
+
+exports.decrementCompaniesTotalCountOnDelete = functions.firestore
+                                                        .document(`/companies/{companyId}`)
+                                                        .onDelete(async () => {
+                                                            await admin.firestore()
+                                                                    .doc(`__documentCounters/companies`)
+                                                                    .update('totalCount', admin.firestore.FieldValue.increment(-1));
+                                                        });
+
+exports.incrementCoursesTotalCountOnCreate = functions.firestore
+                                                    .document(`/courses/{courseId}`)
+                                                    .onCreate(async () => {
                                                         await admin.firestore()
-                                                                .doc(`companies/${companyId}`)
-                                                                .update('employeesTotalCount', admin.firestore.FieldValue.increment(-1));
+                                                                .doc(`__documentCounters/courses`)
+                                                                .update('totalCount', admin.firestore.FieldValue.increment(1));
                                                     });
+
+exports.decrementCoursesTotalCountOnDelete = functions.firestore
+                                                    .document(`/courses/{courseId}`)
+                                                    .onDelete(async () => {
+                                                        await admin.firestore()
+                                                                .doc(`__documentCounters/courses`)
+                                                                .update('totalCount', admin.firestore.FieldValue.increment(-1));
+                                                    });
+
+exports.incrementPlansTotalCountOnCreate = functions.firestore
+                                                    .document(`/plans/{planId}`)
+                                                    .onCreate(async () => {
+                                                        await admin.firestore()
+                                                                .doc(`__documentCounters/plans`)
+                                                                .update('totalCount', admin.firestore.FieldValue.increment(1));
+                                                    });
+
+exports.decrementPlansTotalCountOnDelete = functions.firestore
+                                                    .document(`/plans/{planId}`)
+                                                    .onDelete(async () => {
+                                                        await admin.firestore()
+                                                                .doc(`__documentCounters/plans`)
+                                                                .update('totalCount', admin.firestore.FieldValue.increment(-1));
+                                                    });
+                            

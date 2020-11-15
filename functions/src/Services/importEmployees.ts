@@ -6,7 +6,7 @@ import * as fs from 'fs';
 import { EmployeeData } from '../Schema/Data';
 import { resolveCompany } from '../Helpers/ResolveDocuments';
 
-import addEmployee from './addEmployee';
+import addCompanyEmployee from './addCompanyEmployee';
 
 import PromisePool = require('@supercharge/promise-pool');
 import { now } from 'moment';
@@ -36,7 +36,7 @@ export default async (filePath: string, companyId: string) => {
                                                                 throw new functions.https.HttpsError('internal', 'The employeeId is invalid', error);
                                                             });
                     
-                            await addEmployee(employee, company.id);
+                            await addCompanyEmployee(company, employee);
                         } catch (error) {
                             const errorMessage = (error.code === 'failed-precondition') ? error.message : 'INTERNAL ERROR';
 

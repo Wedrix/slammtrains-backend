@@ -2,11 +2,9 @@ import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
 
 import { EmployeeData } from '../Schema/Data';
-import { resolveCompany } from '../Helpers/ResolveDocuments';
+import { Company } from '../Schema/Company';
 
-export default async (employeeData: EmployeeData, companyId: string) => {
-    const company = await resolveCompany(`companies/${companyId}`);
-
+export default async (company: Company, employeeData: EmployeeData) => {
     if (!company.plan) {
         throw new functions.https.HttpsError('failed-precondition', 'The plan no longer exists, most likely because, it has been removed by the Admin.');
     }
@@ -42,8 +40,8 @@ export default async (employeeData: EmployeeData, companyId: string) => {
             .add({ 
                 uid: user.uid,
                 ...employeeData, 
-                enrolledCourses: [],
-                company: admin.firestore().doc(`companies/${companyId}`),
+                enrolledCourses: {},
+                company: admin.firestore().doc(`companies/${company.id}`),
                 createdAt: new Date().valueOf(), 
             })
             .catch(error => {

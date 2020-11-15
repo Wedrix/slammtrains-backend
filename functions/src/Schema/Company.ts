@@ -1,4 +1,5 @@
 import * as Schema from 'zod';
+import * as admin from 'firebase-admin';
 
 import { Image } from './Image';
 import { Address } from './Address';
@@ -26,13 +27,19 @@ export const Company = Schema.object({
     numberOfEmployees: Schema.string(),
     phoneNumber: Schema.string(),
     postalAddress: Schema.string().nullable(),
-    plan: Schema.transformer(Schema.any().nullable(), Plan.nullable(), async (plan) => {
-        if (!Plan.check(plan)) {
-            return resolvePlan(plan);
-        }
+    plan: Schema.unknown()
+                .transform(Plan.nullable(), async (plan) => {
+                    if (!Plan.nullable().check(plan)) {
+                        if ((typeof plan === 'string') 
+                            || (plan instanceof admin.firestore.DocumentReference)) {
+                                return resolvePlan(plan);
+                        }
 
-        return plan;
-    }).nullable(),
+                        return null;
+                    }
+
+                    return plan;
+                }),
     subscription: Subscription.nullable(),
     accessBlockedAt: Schema.number().nullable(),
 });

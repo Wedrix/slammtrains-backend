@@ -1,20 +1,12 @@
 import * as Schema from 'zod';
 
-import { Course } from './Course';
-import { resolveCourse } from '../Helpers/ResolveDocuments';
 import { Billing } from './Billing';
 
 export const Plan = Schema.object({
     id: Schema.string(),
     name: Schema.string(), 
     courses: Schema.array(
-        Schema.transformer(Schema.any(), Course, async (course) => {
-            if (!Course.check(course)) {
-                return resolveCourse(course);
-            }
-
-            return course;
-        })
+        Schema.unknown()
     ),
     description: Schema.string(),
     licensedNumberOfEmployees: Schema.number(),

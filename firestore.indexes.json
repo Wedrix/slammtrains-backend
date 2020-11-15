@@ -5,15 +5,52 @@
       "queryScope": "COLLECTION",
       "fields": [
         {
-          "fieldPath": "subscription.expiryNotificationSentAt",
+          "fieldPath": "accessBlocked",
           "order": "ASCENDING"
         },
         {
-          "fieldPath": "subscription.endsAt",
+          "fieldPath": "subscription.expiresAt",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "companies",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "subscription.expiryReminderNotificationSentAt",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "subscription.expiresAt",
           "order": "ASCENDING"
         }
       ]
     }
   ],
-  "fieldOverrides": []
+  "fieldOverrides": [
+    {
+      "collectionGroup": "employees",
+      "fieldPath": "uid",
+      "indexes": [
+        {
+          "order": "ASCENDING",
+          "queryScope": "COLLECTION"
+        },
+        {
+          "order": "DESCENDING",
+          "queryScope": "COLLECTION"
+        },
+        {
+          "arrayConfig": "CONTAINS",
+          "queryScope": "COLLECTION"
+        },
+        {
+          "order": "ASCENDING",
+          "queryScope": "COLLECTION_GROUP"
+        }
+      ]
+    }
+  ]
 }

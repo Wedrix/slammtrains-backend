@@ -1,11 +1,10 @@
 import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
 
-import { resolveCompany, resolveEmployee } from '../Helpers/ResolveDocuments';
+import { Company } from '../Schema/Company';
+import { resolveEmployee } from '../Helpers/ResolveDocuments';
 
-export default async (employeeId: string, companyId: string) => {
-    const company = await resolveCompany(`companies/${companyId}`);
-
+export default async (company: Company, employeeId: string) => {
     const employee = await resolveEmployee(`companies/${company.id}/employees/${employeeId}`);
 
     // Delete User

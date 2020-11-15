@@ -1,29 +1,39 @@
 import * as Schema from 'zod';
+import * as admin from 'firebase-admin';
 
-import { Course } from './Course';
 import { Company } from './Company';
-import { resolveCompany, resolveCourse } from '../Helpers/ResolveDocuments';
+import { resolveCompany } from '../Helpers/ResolveDocuments';
 
 export const Employee = Schema.object({
+    id: Schema.string(),
     name: Schema.string(),
     email: Schema.string(),
     uid: Schema.string(),
-    enrolledCourses: Schema.array(
-        Schema.transformer(Schema.any(), Course, async (course) => {
-            if (!Course.check(course)) {
-                return resolveCourse(course);
-            }
-
-            return course;
-        })
+    enrolledCourses: Schema.record(
+        Schema.record(
+            Schema.object({
+                completedLessons: Schema.array(
+                    Schema.string()
+                ),
+                testScoreHistory: Schema.array(
+                    Schema.number()
+                ),
+            })
+        )
     ),
-    company: Schema.transformer(Schema.any(), Company, async (company) => {
-        if (!Company.check(company)) {
-            return resolveCompany(company);
-        }
+    company: Schema.unknown()
+                    .transform(Company.nullable(), async (company) => {
+                        if (!Company.nullable().check(company)) {
+                            if ((typeof company === 'string') 
+                                || (company instanceof admin.firestore.DocumentReference)) {
+                                    return resolveCompany(company);
+                            }
 
-        return company;
-    }),
+                            return null;
+                        }
+
+                        return company;
+                    }),
     createdAt: Schema.number(),
 });
 

@@ -1,11 +1,10 @@
 import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
 
-import { resolveCompany, resolvePlan } from '../Helpers/ResolveDocuments';
+import { resolvePlan } from '../Helpers/ResolveDocuments';
+import { Company } from '../Schema/Company';
 
-export default async (planId: string, companyId: string) => {
-    const company = await resolveCompany(`companies/${companyId}`);
-
+export default async (company: Company, planId: string) => {
     const plan = await resolvePlan(`plans/${planId}`);
 
     if (!plan) {
@@ -19,7 +18,7 @@ export default async (planId: string, companyId: string) => {
     const subscription = null;
 
     await admin.firestore()
-                .doc(`companies/${companyId}`)
+                .doc(`companies/${company.id}`)
                 .update({ 
                     plan: admin.firestore().doc(`plans/${planId}`),
                     subscription,

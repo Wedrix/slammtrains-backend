@@ -5,7 +5,13 @@ import { Image } from './Image';
 import { Address } from './Address';
 import { Course } from './Course';
 
-export const PlanData = Plan.omit({ id: true, createdAt: true });
+export const PlanData = Plan.omit({ id: true, courses: true, createdAt: true })
+                            .merge(
+                                Schema.object({
+                                    courses: Schema.array(Schema.string()),
+                                })
+                            );
+                            
 export const CourseData = Course.omit({ id: true, createdAt: true });
 export const DraftCourseData = CourseData.partial();
 
@@ -32,9 +38,23 @@ export const EmployeeData = Schema.object({
     email: Schema.string(),
 });
 
+export const CompletedLessonData = Schema.object({
+    courseId: Schema.string(), 
+    moduleName: Schema.string(),
+    lessonTitle: Schema.string(), 
+});
+
+export const TestScoreData = Schema.object({
+    courseId: Schema.string(), 
+    moduleName: Schema.string(),
+    testScore: Schema.number(), 
+});
+
 export type EmployeeData = Schema.infer<typeof EmployeeData>;
 export type PlanData = Schema.infer<typeof PlanData>;
 export type CompanyData = Schema.infer<typeof CompanyData>;
 export type HRData = Schema.infer<typeof HRData>;
 export type CourseData = Schema.infer<typeof CourseData>;
 export type DraftCourseData = Schema.infer<typeof DraftCourseData>;
+export type CompletedLessonData = Schema.infer<typeof CompletedLessonData>;
+export type TestScoreData = Schema.infer<typeof TestScoreData>;
