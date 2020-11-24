@@ -38,6 +38,7 @@ export const Module = Schema.object({
 export const Course = Schema.object({
     id: Schema.string(),
     name: Schema.string(),
+    __name: Schema.string(),
     description: Schema.string(),
     overview: Schema.string(),
     thumbnail: Image,

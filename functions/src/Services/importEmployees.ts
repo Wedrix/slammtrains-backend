@@ -67,13 +67,13 @@ export default async (filePath: string, companyId: string) => {
                     message: {
                         subject: `Some records could not be imported`,
                         html: `Hello ${company.hr.name},
-                            <br/>Your recent import failed on some records. Kindly view the breakdown below:
+                            <br/>Your recent employees import failed on some records. Kindly view the breakdown below:
                             <br/>
                             <br/>
                             <table>
                                 <tr>
-                                    <th>Name</th>
-                                    <th>Email</th>
+                                    <th>Employee Name</th>
+                                    <th>Employee Email</th>
                                     <th>Error</th>
                                 </tr>
                                 ${table}

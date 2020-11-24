@@ -1,6 +1,10 @@
 import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
 
+import { lower } from 'case';
+
+import axios from 'axios';
+
 import { CompanyData } from '../Schema/Data';
 
 export default async (uid: string, companyData: CompanyData) => {
@@ -19,28 +23,22 @@ export default async (uid: string, companyData: CompanyData) => {
 
     const emailId = (`${companyId}@${companyDomain}`).toLowerCase();
 
-    const hr = {
-        name: user.displayName,
-        email: user.email,
-        uid: user.uid,
-    };
-
-    const subscription = null;
-
-    const accessBlockedAt = null;
-
-    const plan = admin.firestore().doc(`plans/${companyData.plan}`);
-
     await admin.firestore()
                 .doc(`companies/${companyId}`)
                 .set({
                     ...companyData,
+                    __name: lower(companyData.name),
                     emailId,
-                    hr,
-                    plan,
+                    hr: {
+                        name: user.displayName,
+                        email: user.email,
+                        uid: user.uid,
+                    },
+                    plan: admin.firestore().doc(`plans/${companyData.plan}`),
                     employeesTotalCount: 0,
-                    subscription,
-                    accessBlockedAt,
+                    subscription: null,
+                    accessBlockedAt: null,
+                    createdAt: new Date().valueOf(),
                 });
 
     // Send Welcome Email
@@ -60,4 +58,18 @@ export default async (uid: string, companyData: CompanyData) => {
                         throw new functions.https.HttpsError('internal', 'The mail record could not be added', error);
                     });
     }
+
+    // Create Paystack Customer
+    const paystack = functions.config().paystack;
+
+    await axios.post(`${paystack.base_uri}/customer`, {
+                    email: emailId,
+                }, {
+                    headers: {
+                        Authorization: `Bearer ${paystack.secret_key}`,
+                    },
+                })
+                .catch(error => {
+                    throw new functions.https.HttpsError('unknown', 'Error creating paystack user for company', error);
+                });
 };

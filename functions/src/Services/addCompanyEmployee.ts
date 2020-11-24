@@ -1,16 +1,23 @@
 import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
 
+import { lower } from 'case';
+
 import { EmployeeData } from '../Schema/Data';
 import { Company } from '../Schema/Company';
+import { resolvePlan } from '../Helpers/ResolveDocuments';
+
+import generateCompanyEmployeeSignInLink from './generateCompanyEmployeeSignInLink';
 
 export default async (company: Company, employeeData: EmployeeData) => {
+    company.plan = await resolvePlan(company.plan);
+
     if (!company.plan) {
-        throw new functions.https.HttpsError('failed-precondition', 'The plan no longer exists, most likely because, it has been removed by the Admin.');
+        throw new functions.https.HttpsError('failed-precondition', 'You do not have any plan. Kindly pick a plan to proceed.');
     }
 
     if (company.plan.licensedNumberOfEmployees <= company.employeesTotalCount) {
-        throw new functions.https.HttpsError('failed-precondition', 'All the employee licenses have been exausted for the plan.');
+        throw new functions.https.HttpsError('failed-precondition', 'You have exhausted all the available employee licenses for you plan. Kindly upgrade to proceed.');
     }
 
     // Create User
@@ -35,42 +42,37 @@ export default async (company: Company, employeeData: EmployeeData) => {
             });
 
     // Add Employee record
-    await admin.firestore()
-            .collection(`companies/${company.id}/employees`)
-            .add({ 
-                uid: user.uid,
-                ...employeeData, 
-                enrolledCourses: {},
-                company: admin.firestore().doc(`companies/${company.id}`),
-                createdAt: new Date().valueOf(), 
-            })
-            .catch(error => {
-                throw new functions.https.HttpsError('internal', 'The employee record could not be created', error);
-            });
-
-    // Send passwordless sign-in link
-    if (user.email) {
-        const actionCodeSettings = {
-            url: functions.config().auth.employee_app_domain,
-            handleCodeInApp: true,
-        };
-
-        const signInLink = await admin.auth()
-                                    .generateSignInWithEmailLink(user.email, actionCodeSettings)
+    const employeeId = await admin.firestore()
+                                    .collection(`companies/${company.id}/employees`)
+                                    .add({ 
+                                        uid: user.uid,
+                                        ...employeeData, 
+                                        __name: lower(employeeData.name),
+                                        enrolledCourses: {},
+                                        company: admin.firestore().doc(`companies/${company.id}`),
+                                        createdAt: new Date().valueOf(), 
+                                    })
+                                    .then(employeeDocumentReference => employeeDocumentReference.id)
                                     .catch(error => {
-                                        throw new functions.https.HttpsError('internal', 'The sign-in link could not be generated', error);
+                                        throw new functions.https.HttpsError('internal', 'The employee record could not be created', error);
                                     });
 
-        await admin.firestore()
+    // Generate passwordless sign-in link
+    await generateCompanyEmployeeSignInLink(company, employeeId);
+
+    // Send welcome email
+    const business = functions.config().business.name;
+
+    await admin.firestore()
                 .collection('mail').add({
                     to: user.email,
                     message: {
-                        subject: `Welcome to ${functions.config().business.name}!`,
-                        html: `<b>Welcome ${employeeData.name}!</b> <br/><br/>Kindly use <a href="${signInLink}">this link</a> to sign in anytime you want to learn!<br/><br/>Cheers!`,
+                        subject: `Welcome to ${business.name}!`,
+                        html: `<b>Hello ${employeeData.name}, welcome to ${business.name}!</b> 
+                            <br/><br/>You should receive a sign in link shorlty. Kindly use it to sign in anytime you want to learn.<br/><br/>Cheers!`,
                     },
                 })
                 .catch(error => {
                     throw new functions.https.HttpsError('internal', 'The mail record could not be added', error);
                 });
-    }
 };

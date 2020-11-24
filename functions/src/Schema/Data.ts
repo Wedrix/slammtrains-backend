@@ -27,7 +27,7 @@ export const CompanyData = Schema.object({
     name: Schema.string(),
     email: Schema.string(),
     phoneNumber: Schema.string(),
-    numberOfEmployees: Schema.string(),
+    size: Schema.string(),
     industry: Schema.string().nullable(),
     address: Address,
     postalAddress: Schema.string().nullable(),
@@ -50,6 +50,17 @@ export const TestScoreData = Schema.object({
     testScore: Schema.number(), 
 });
 
+export const TransactionsPaginationData = Schema.object({
+    companyId: Schema.string().optional(),
+    perPage: Schema.number(),
+    page: Schema.number(),
+});
+
+export const RequestedCourseData = Schema.object({
+    name: Schema.string(),
+    description: Schema.string(),
+});
+
 export type EmployeeData = Schema.infer<typeof EmployeeData>;
 export type PlanData = Schema.infer<typeof PlanData>;
 export type CompanyData = Schema.infer<typeof CompanyData>;
@@ -58,3 +69,5 @@ export type CourseData = Schema.infer<typeof CourseData>;
 export type DraftCourseData = Schema.infer<typeof DraftCourseData>;
 export type CompletedLessonData = Schema.infer<typeof CompletedLessonData>;
 export type TestScoreData = Schema.infer<typeof TestScoreData>;
+export type TransactionsPaginationData = Schema.infer<typeof TransactionsPaginationData>;
+export type RequestedCourseData = Schema.infer<typeof RequestedCourseData>;

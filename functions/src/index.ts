@@ -22,18 +22,33 @@ import sendSubscriptionReminders from './Services/sendSubscriptionReminders';
 import blockAccessForCompaniesWithExpiredSubscriptions from './Services/blockAccessForCompaniesWithExpiredSubscriptions';
 import addEmployeeTestScore from './Services/addEmployeeTestScore';
 import addEmployeeCompletedLesson from './Services/addEmployeeCompletedLesson';
+import fetchCompanyTransactions from './Services/fetchCompanyTransactions';
+import requestCourse from './Services/requestCourse';
+import removeRequestedCourse from './Services/removeRequestedCourse';
+import generateCompanyEmployeeSignInLink from './Services/generateCompanyEmployeeSignInLink';
 
 import * as Schema from 'zod';
 import * as ResolveDocuments from './Helpers/ResolveDocuments';
 
-import { EmployeeData, PlanData, CompanyData, HRData, CourseData, DraftCourseData, CompletedLessonData, TestScoreData } from './Schema/Data';
+import { 
+    EmployeeData,
+    PlanData,
+    CompanyData,
+    HRData,
+    CourseData,
+    DraftCourseData,
+    CompletedLessonData,
+    TestScoreData,
+    TransactionsPaginationData,
+    RequestedCourseData,
+} from './Schema/Data';
 
 interface Auth {
     uid: string;
     token: admin.auth.DecodedIdToken;
-};
+}
 
-const authorizeRequest = async (auth: Auth | undefined, accessLevel: string) => {
+const authorizeRequest = async (auth: Auth | undefined, accessLevel: 'admin' | 'hr' | 'employee') => {
     if (!auth) {
         throw new functions.https.HttpsError('permission-denied', 'You are not authorized to call this function');
     }
@@ -143,20 +158,18 @@ exports.registerCompany = functions.https.onCall(async (data, context) => {
 exports.addCompanyEmployee = functions.https.onCall(async (data, context) => {
     await authorizeRequest(context.auth, 'hr');
 
-    const company = await resolveCompanyForHr(context.auth);
-
     const employeeData = await EmployeeData.parseAsync(data.employeeData)
                                             .catch(error => {
                                                 throw new functions.https.HttpsError('invalid-argument', 'The employee data is invalid', error);
                                             });
 
+    const company = await resolveCompanyForHr(context.auth);
+
     await addCompanyEmployee(company, employeeData);
 });
 
-exports.removeCompanyEmployee = functions.https.onCall(async (data, context) => {
+exports.generateCompanyEmployeeSignInLink = functions.https.onCall(async (data, context) => {
     await authorizeRequest(context.auth, 'hr');
-
-    const company = await resolveCompanyForHr(context.auth);
 
     const employeeId = await Schema.string()
                                     .parseAsync(data.employeeId)
@@ -164,13 +177,27 @@ exports.removeCompanyEmployee = functions.https.onCall(async (data, context) => 
                                         throw new functions.https.HttpsError('invalid-argument', 'The employee Id is invalid', error);
                                     });
 
+    const company = await resolveCompanyForHr(context.auth);
+
+    await generateCompanyEmployeeSignInLink(company, employeeId);
+});
+
+exports.removeCompanyEmployee = functions.https.onCall(async (data, context) => {
+    await authorizeRequest(context.auth, 'hr');
+
+    const employeeId = await Schema.string()
+                                    .parseAsync(data.employeeId)
+                                    .catch(error => {
+                                        throw new functions.https.HttpsError('invalid-argument', 'The employee Id is invalid', error);
+                                    });
+
+    const company = await resolveCompanyForHr(context.auth);
+
     await removeCompanyEmployee(company, employeeId);
 });
 
 exports.setCompanyPlan = functions.https.onCall(async (data, context) => {
     await authorizeRequest(context.auth, 'hr');
-
-    const company = await resolveCompanyForHr(context.auth);
 
     const planId = await Schema.string()
                                 .parseAsync(data.planId)
@@ -178,7 +205,22 @@ exports.setCompanyPlan = functions.https.onCall(async (data, context) => {
                                     throw new functions.https.HttpsError('invalid-argument', 'The plan Id is invalid', error);
                                 });
 
+    const company = await resolveCompanyForHr(context.auth);
+
     await setCompanyPlan(company, planId);
+});
+
+exports.requestCourse = functions.https.onCall(async (data, context) => {
+    await authorizeRequest(context.auth, 'hr');
+
+    const requestedCourseData = await RequestedCourseData.parseAsync(data.requestedCourseData)
+                                                        .catch(error => {
+                                                            throw new functions.https.HttpsError('invalid-argument', 'The requested course data is invalid', error);
+                                                        });
+
+    const company = await resolveCompanyForHr(context.auth);
+
+    await requestCourse(company, requestedCourseData);
 });
 
 exports.addPlan = functions.https.onCall(async (data, context) => {
@@ -190,6 +232,18 @@ exports.addPlan = functions.https.onCall(async (data, context) => {
                                     });
 
     await addPlan(planData);
+});
+
+exports.removeRequestedCourse = functions.https.onCall(async (data, context) => {
+    await authorizeRequest(context.auth, 'admin');
+
+    const requestedCourseId = await Schema.string()
+                                        .parseAsync(data.requestedCourseId)
+                                        .catch(error => {
+                                            throw new functions.https.HttpsError('invalid-argument', 'The requested course id is ivalid', error);
+                                        });
+
+    await removeRequestedCourse(requestedCourseId);
 });
 
 exports.setCompanyCustomPlan = functions.https.onCall(async (data, context) => {
@@ -229,6 +283,26 @@ exports.addDraftCourse = functions.https.onCall(async (data, context) => {
                                                 });
 
     await addDraftCourse(draftCourseData);
+});
+
+exports.fetchCompanyTransactions = functions.https.onCall(async (data, context) => {
+    const transactionsPaginationData = await TransactionsPaginationData.parseAsync(data.transactionsPaginationData)
+                                                                        .catch(error => {
+                                                                            throw new functions.https.HttpsError('invalid-argument', 'The pagination data is invalid', error);
+                                                                        });
+
+    if (transactionsPaginationData.companyId) {
+        await authorizeRequest(context.auth, 'admin');
+    } 
+    else {
+        await authorizeRequest(context.auth, 'hr');
+    }
+
+    const company = transactionsPaginationData.companyId 
+                        ? await ResolveDocuments.resolveCompany(`companies/${transactionsPaginationData.companyId}`)
+                        : await resolveCompanyForHr(context.auth);
+
+    return fetchCompanyTransactions(company, transactionsPaginationData);
 });
 
 exports.addEmployeeCompletedLesson = functions.https.onCall(async (data, context) => {
@@ -374,4 +448,20 @@ exports.decrementPlansTotalCountOnDelete = functions.firestore
                                                                 .doc(`__documentCounters/plans`)
                                                                 .update('totalCount', admin.firestore.FieldValue.increment(-1));
                                                     });
+
+exports.incrementRequestedCoursesTotalCountOnCreate = functions.firestore
+                                                                .document(`/requestedCourses/{requestedCourseId}`)
+                                                                .onCreate(async () => {
+                                                                    await admin.firestore()
+                                                                            .doc(`__documentCounters/requestedCourses`)
+                                                                            .update('totalCount', admin.firestore.FieldValue.increment(1));
+                                                                });
+
+exports.decrementRequestedCoursesTotalCountOnDelete = functions.firestore
+                                                                .document(`/requestedCourses/{requestedCoursesId}`)
+                                                                .onDelete(async () => {
+                                                                    await admin.firestore()
+                                                                            .doc(`__documentCounters/requestedCourses`)
+                                                                            .update('totalCount', admin.firestore.FieldValue.increment(-1));
+                                                                });
                             

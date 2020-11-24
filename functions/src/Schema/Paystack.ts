@@ -33,8 +33,6 @@ export const Plan = Schema.object({
 .passthrough();
 
 export const Customer = Schema.object({
-    first_name: Schema.string(),
-    last_name: Schema.string(),
     email: Schema.string(),
     customer_code: Schema.string(),
 })

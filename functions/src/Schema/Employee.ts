@@ -1,12 +1,11 @@
 import * as Schema from 'zod';
-import * as admin from 'firebase-admin';
 
-import { Company } from './Company';
-import { resolveCompany } from '../Helpers/ResolveDocuments';
+import { CompanyReference } from './Company';
 
 export const Employee = Schema.object({
     id: Schema.string(),
     name: Schema.string(),
+    __name: Schema.string(),
     email: Schema.string(),
     uid: Schema.string(),
     enrolledCourses: Schema.record(
@@ -21,19 +20,7 @@ export const Employee = Schema.object({
             })
         )
     ),
-    company: Schema.unknown()
-                    .transform(Company.nullable(), async (company) => {
-                        if (!Company.nullable().check(company)) {
-                            if ((typeof company === 'string') 
-                                || (company instanceof admin.firestore.DocumentReference)) {
-                                    return resolveCompany(company);
-                            }
-
-                            return null;
-                        }
-
-                        return company;
-                    }),
+    company: CompanyReference,
     createdAt: Schema.number(),
 });
 

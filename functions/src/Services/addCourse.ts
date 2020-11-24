@@ -1,6 +1,8 @@
 import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
 
+import { lower } from 'case';
+
 import { CourseData } from '../Schema/Data';
 
 export default async (courseData: CourseData) => {
@@ -8,6 +10,7 @@ export default async (courseData: CourseData) => {
                 .collection('courses')
                 .add({
                     ...courseData,
+                    __name: lower(courseData.name),
                     createdAt: new Date().valueOf(),
                 })
                 .catch(error => {

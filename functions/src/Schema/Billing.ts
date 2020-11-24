@@ -26,3 +26,5 @@ export const Billing = Schema.object({
 });
 
 export type Billing = Schema.infer<typeof Billing>;
+export type BillingInterval = 'monthly' | 'biannually' | 'annually' | 'biennially';
+export type BillingCurrency = 'GHS' | 'NGN';

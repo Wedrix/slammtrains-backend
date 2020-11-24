@@ -4,9 +4,10 @@ import * as moment from 'moment';
 
 import * as Paystack from '../Schema/Paystack';
 import { Company } from '../Schema/Company';
-import { BillingIntervals } from '../Schema/Billing';
+import { BillingIntervals, BillingInterval } from '../Schema/Billing';
 
 import unblockCompanyAccess from './unblockCompanyAccess';
+import { resolvePlan } from '../Helpers/ResolveDocuments';
 
 export default async (transaction: Paystack.Transaction) => {
     const company = await admin.firestore()
@@ -24,6 +25,8 @@ export default async (transaction: Paystack.Transaction) => {
 
                                     return Company.parseAsync(documentData);
                                 });
+
+    company.plan = await resolvePlan(company.plan);
 
     if (!company.plan) {
         throw new functions.https.HttpsError('failed-precondition', 'The plan no longer exists, most likely because, it has removed by the Admin.');
@@ -44,13 +47,15 @@ export default async (transaction: Paystack.Transaction) => {
     if (company.accessBlockedAt) {
         await unblockCompanyAccess(company.id);
     }
+
+    const billingInterval: BillingInterval = company.plan.billing.interval;
     
     await admin.firestore()
                 .doc(`companies/${company.id}`)
                 .update({ 
                     subscription: {
                         createdAt: moment().valueOf(),
-                        expiresAt: moment().add(BillingIntervals[company.plan.billing.interval], 'days').valueOf(),
+                        expiresAt: moment().add(BillingIntervals[billingInterval], 'days').valueOf(),
                         expiryReminderNotificationSentAt: null,
                         transaction,
                     },
