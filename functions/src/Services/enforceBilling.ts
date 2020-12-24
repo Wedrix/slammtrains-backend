@@ -3,7 +3,7 @@ import * as admin from 'firebase-admin';
 
 import PromisePool = require('@supercharge/promise-pool');
 
-import blockCompanyAccess from './blockCompanyAccess';
+import blockCompanyAccessToCourses from './blockCompanyAccessToCourses';
 
 export default async () => {
     const now = new Date().valueOf();
@@ -13,7 +13,8 @@ export default async () => {
     const companies = await admin.firestore()
                                 .collection('companies')
                                 .where('subscription.expiresAt', '<=', now)
-                                .where('accessBlocked', '==', false)
+                                .where('accessToCoursesBlockedAt', '==', null)
+                                .where('blockedAt', '==', null)
                                 .select()
                                 .limit(batchSize)
                                 .get()
@@ -35,6 +36,6 @@ export default async () => {
                     .process(async (company) => {
                         const companyId = company.id;
 
-                        await blockCompanyAccess(companyId, 'Subscription Expired');
+                        await blockCompanyAccessToCourses(companyId);
                     });
 };

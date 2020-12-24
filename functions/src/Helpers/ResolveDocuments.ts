@@ -5,46 +5,53 @@ import { Company } from '../Schema/Company';
 import { Employee } from '../Schema/Employee';
 import { Plan } from '../Schema/Plan';
 import { Course } from '../Schema/Course';
+import { Business } from '../Schema/Business';
 
 const fetchDocument = async (documentPath: string | admin.firestore.DocumentReference) => {
     const documentReference = (typeof documentPath === 'string') ? admin.firestore().doc(documentPath) : documentPath;
 
-    const document = await documentReference.get()
-                                            .catch(error => {
-                                                throw new functions.https.HttpsError('internal', 'Error retrieving document', error);
-                                            });
-    
-    return document;
+    const documentSnapshot = await documentReference.get()
+                                                    .catch(error => {
+                                                        throw new functions.https.HttpsError('internal', 'Error retrieving document', error);
+                                                    });
+
+    const documentData = documentSnapshot.data();
+
+    if (!documentData) {
+        throw new functions.https.HttpsError('not-found', 'The document does not exist.');
+    }
+
+    return Object.assign(documentData, { id: documentSnapshot.id });
+};
+
+export const resolveBusiness = async () => {
+    const settingsDocument = await fetchDocument('/settings/index');
+
+    const businessData = settingsDocument.business;
+
+    return Business.parseAsync(businessData);
 };
 
 export const resolveCompany = async (documentPath: string | admin.firestore.DocumentReference) => {
     const document = await fetchDocument(documentPath);
-
-    const documentData = Object.assign(document.data(), { id: document.id });
-                                
-    return Company.parseAsync(documentData);
+    
+    return Company.parseAsync(document);
 };
 
 export const resolveEmployee = async (documentPath: string | admin.firestore.DocumentReference) => {
     const document = await fetchDocument(documentPath);
-
-    const documentData = Object.assign(document.data(), { id: document.id });
     
-    return Employee.parseAsync(documentData);
+    return Employee.parseAsync(document);
 };
 
 export const resolvePlan = async (documentPath: string | admin.firestore.DocumentReference) => {
     const document = await fetchDocument(documentPath);
-
-    const documentData = Object.assign(document.data(), { id: document.id });
     
-    return Plan.parseAsync(documentData);
+    return Plan.parseAsync(document);
 };
 
 export const resolveCourse = async (documentPath: string | admin.firestore.DocumentReference) => {
     const document = await fetchDocument(documentPath);
-
-    const documentData = Object.assign(document.data(), { id: document.id });
     
-    return Course.parseAsync(documentData);
+    return Course.parseAsync(document);
 };

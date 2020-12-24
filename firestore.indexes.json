@@ -5,7 +5,11 @@
       "queryScope": "COLLECTION",
       "fields": [
         {
-          "fieldPath": "accessBlocked",
+          "fieldPath": "accessToCoursesBlockedAt",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "blockedAt",
           "order": "ASCENDING"
         },
         {
@@ -19,6 +23,10 @@
       "queryScope": "COLLECTION",
       "fields": [
         {
+          "fieldPath": "blockedAt",
+          "order": "ASCENDING"
+        },
+        {
           "fieldPath": "subscription.expiryReminderNotificationSentAt",
           "order": "ASCENDING"
         },
@@ -29,28 +37,5 @@
       ]
     }
   ],
-  "fieldOverrides": [
-    {
-      "collectionGroup": "employees",
-      "fieldPath": "uid",
-      "indexes": [
-        {
-          "order": "ASCENDING",
-          "queryScope": "COLLECTION"
-        },
-        {
-          "order": "DESCENDING",
-          "queryScope": "COLLECTION"
-        },
-        {
-          "arrayConfig": "CONTAINS",
-          "queryScope": "COLLECTION"
-        },
-        {
-          "order": "ASCENDING",
-          "queryScope": "COLLECTION_GROUP"
-        }
-      ]
-    }
-  ]
+  "fieldOverrides": []
 }

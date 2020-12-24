@@ -1,7 +1,5 @@
 import * as Schema from 'zod';
 
-import { CompanyReference } from './Company';
-
 export const Employee = Schema.object({
     id: Schema.string(),
     name: Schema.string(),
@@ -14,13 +12,10 @@ export const Employee = Schema.object({
                 completedLessons: Schema.array(
                     Schema.string()
                 ),
-                testScoreHistory: Schema.array(
-                    Schema.number()
-                ),
             })
         )
     ),
-    company: CompanyReference,
+    company: Schema.unknown(),
     createdAt: Schema.number(),
 });
 

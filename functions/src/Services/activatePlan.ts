@@ -4,9 +4,10 @@ import * as moment from 'moment';
 
 import * as Paystack from '../Schema/Paystack';
 import { Company } from '../Schema/Company';
+import { Plan } from '../Schema/Plan';
 import { BillingIntervals, BillingInterval } from '../Schema/Billing';
 
-import unblockCompanyAccess from './unblockCompanyAccess';
+import unblockCompanyAccessToCourses from './unblockCompanyAccessToCourses';
 import { resolvePlan } from '../Helpers/ResolveDocuments';
 
 export default async (transaction: Paystack.Transaction) => {
@@ -26,10 +27,23 @@ export default async (transaction: Paystack.Transaction) => {
                                     return Company.parseAsync(documentData);
                                 });
 
-    company.plan = await resolvePlan(company.plan);
+    if (company.plan instanceof admin.firestore.DocumentReference) {
+        company.plan = await resolvePlan(company.plan)
+                                        .catch(error => {
+                                            if (error.code === 'not-found') {
+                                                return null;
+                                            }
+
+                                            throw error;
+                                        });
+    }
 
     if (!company.plan) {
-        throw new functions.https.HttpsError('failed-precondition', 'The plan no longer exists, most likely because, it has removed by the Admin.');
+        throw new functions.https.HttpsError('not-found', 'The plan no longer exists, most likely because, it has removed by the Admin.');
+    }
+
+    if (!Plan.check(company.plan)) {
+        throw new functions.https.HttpsError('invalid-argument', 'The plan data is invalid.');
     }
 
     if (transaction.metadata.planId !== company.plan.id) {
@@ -40,12 +54,12 @@ export default async (transaction: Paystack.Transaction) => {
         throw new functions.https.HttpsError('failed-precondition', 'Billing is not enabled for the plan.');
     }
 
-    if ((transaction.amount / 100) !== company.plan.billing.price) {
+    if (((transaction.amount / 100) !== company.plan.billing.price) || (transaction.currency !== company.plan.billing.currency)) {
         throw new functions.https.HttpsError('failed-precondition', 'The plan has not been paid for in full.');
     }
 
-    if (company.accessBlockedAt) {
-        await unblockCompanyAccess(company.id);
+    if (company.accessToCoursesBlockedAt) {
+        await unblockCompanyAccessToCourses(company.id);
     }
 
     const billingInterval: BillingInterval = company.plan.billing.interval;
@@ -53,11 +67,11 @@ export default async (transaction: Paystack.Transaction) => {
     await admin.firestore()
                 .doc(`companies/${company.id}`)
                 .update({ 
+                    [`revenue.${transaction.currency}`]: admin.firestore.FieldValue.increment(transaction.amount),
                     subscription: {
                         createdAt: moment().valueOf(),
                         expiresAt: moment().add(BillingIntervals[billingInterval], 'days').valueOf(),
                         expiryReminderNotificationSentAt: null,
-                        transaction,
                     },
                 })
                 .catch(error => {

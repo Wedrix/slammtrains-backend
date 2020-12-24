@@ -67,3 +67,7 @@ export const Transaction = Schema.object({
 export type Plan = Schema.infer<typeof Plan>;
 export type Subscription = Schema.infer<typeof Subscription>;
 export type Transaction = Schema.infer<typeof Transaction>;
+export type Customer = Schema.infer<typeof Customer>;
+export type Channel = Schema.infer<typeof Channel>;
+export type Currency = Schema.infer<typeof Currency>;
+export type BillingInterval = Schema.infer<typeof BillingInterval>;

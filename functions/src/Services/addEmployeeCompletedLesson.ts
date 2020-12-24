@@ -5,8 +5,8 @@ import { CompletedLessonData } from '../Schema/Data';
 import { Employee } from '../Schema/Employee';
 
 export default async (employee: Employee, completedLessonData: CompletedLessonData) => {
-    if (!employee.company) {
-        throw new functions.https.HttpsError('failed-precondition', 'The employee account is not associated with any company');
+    if (!(employee.company instanceof admin.firestore.DocumentReference)) {
+        throw new functions.https.HttpsError('invalid-argument', 'The reference is invalid');
     }
 
     const { courseId, moduleName, lessonTitle } = completedLessonData;
@@ -21,7 +21,6 @@ export default async (employee: Employee, completedLessonData: CompletedLessonDa
                     .update({
                         [`enrolledCourses.${courseId}.${moduleName}`]: {
                             completedLessons: [],
-                            testScoreHistory: [],
                         },
                     })
                     .catch(error => {

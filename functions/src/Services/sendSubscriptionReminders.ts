@@ -17,6 +17,7 @@ export default async () => {
                                 .where('subscription.expiresAt', '>', now)
                                 .where('subscription.expiresAt', '<=', threeDaysFromNow)
                                 .where('subscription.expiryReminderNotificationSentAt', '==', null)
+                                .where('blockedAt', '==', null)
                                 .select()
                                 .limit(batchSize)
                                 .get()

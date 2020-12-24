@@ -11,7 +11,7 @@ export default async (planData: PlanData, companyId: string) => {
         throw new functions.https.HttpsError('failed-precondition', 'The new plan does not have enough licenses for all the company\'s employees');
     }
 
-    const courses = planData.courses.map(courseId => {
+    const courses = planData.courseIds.map(courseId => {
         return admin.firestore().doc(`courses/${courseId}`);
     });
     
@@ -36,6 +36,26 @@ export default async (planData: PlanData, companyId: string) => {
                     throw new functions.https.HttpsError('internal', 'The company plan could not be updated.', error);
                 });
 
+    await admin.firestore()
+                .collection('customPlanRequests')
+                .where('company', '==', admin.firestore().doc(`companies/${company.id}`))
+                .get()
+                .then(async querySnapshot => {
+                    const documents = querySnapshot.docs;
+
+                    const customPlanRequestId = documents[0].id;
+
+                    await admin.firestore()
+                                .doc(`customPlanRequests/${customPlanRequestId}`)
+                                .delete()
+                                .catch(error => {
+                                    throw new functions.https.HttpsError('internal', 'Cannot delete the custom plan request', error);
+                                });
+                })
+                .catch(error => {
+                    throw new functions.https.HttpsError('internal', 'Cannot get the custom plan request for deletion', error);
+                });
+
     // Send Email Notification
     await admin.firestore()
             .collection('mail')
@@ -44,8 +64,8 @@ export default async (planData: PlanData, companyId: string) => {
                 message: {
                     subject: `Plan changed to custom plan`,
                     html: `Hello ${company.hr.name},
-                        <br/>Your plan has been changed to a custom plan for your business.
-                        <br/>To activate the plan, kindly log in, navigate to Settings -> Billing and click on the 'Activate Plan' button.
+                        <br/>Your active plan has been changed to a custom plan as per your request.
+                        <br/>To activate this plan, kindly log in, navigate to Settings -> Billing and click on the 'Activate Plan' button if billing is enabled for the plan.
                         <br/>Thank You.`,
                 },
             })

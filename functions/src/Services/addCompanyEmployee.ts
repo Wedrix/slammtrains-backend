@@ -5,15 +5,29 @@ import { lower } from 'case';
 
 import { EmployeeData } from '../Schema/Data';
 import { Company } from '../Schema/Company';
-import { resolvePlan } from '../Helpers/ResolveDocuments';
+import { Plan } from '../Schema/Plan';
+import { resolveBusiness, resolvePlan } from '../Helpers/ResolveDocuments';
 
 import generateCompanyEmployeeSignInLink from './generateCompanyEmployeeSignInLink';
 
 export default async (company: Company, employeeData: EmployeeData) => {
-    company.plan = await resolvePlan(company.plan);
+    if (company.plan instanceof admin.firestore.DocumentReference) {
+        company.plan = await resolvePlan(company.plan)
+                                        .catch(error => {
+                                            if (error.code === 'not-found') {
+                                                return null;
+                                            }
+
+                                            throw error;
+                                        });
+    }
 
     if (!company.plan) {
-        throw new functions.https.HttpsError('failed-precondition', 'You do not have any plan. Kindly pick a plan to proceed.');
+        throw new functions.https.HttpsError('not-found', 'Your plan no longer exists, most likely because, it has removed by the Admin.');
+    }
+
+    if (!Plan.check(company.plan)) {
+        throw new functions.https.HttpsError('invalid-argument', 'The plan data is invalid.');
     }
 
     if (company.plan.licensedNumberOfEmployees <= company.employeesTotalCount) {
@@ -36,32 +50,34 @@ export default async (company: Company, employeeData: EmployeeData) => {
 
     // Set Claims 
     await admin.auth()
-            .setCustomUserClaims(user.uid, { accessLevel: 'employee', accessBlocked: false })
+            .setCustomUserClaims(user.uid, { 
+                accessLevel: 'employee', 
+                companyId: company.id,
+            })
             .catch(error => {
                 throw new functions.https.HttpsError('internal', 'The custom claims could not be set on this user', error);
             });
 
     // Add Employee record
-    const employeeId = await admin.firestore()
-                                    .collection(`companies/${company.id}/employees`)
-                                    .add({ 
-                                        uid: user.uid,
-                                        ...employeeData, 
-                                        __name: lower(employeeData.name),
-                                        enrolledCourses: {},
-                                        company: admin.firestore().doc(`companies/${company.id}`),
-                                        createdAt: new Date().valueOf(), 
-                                    })
-                                    .then(employeeDocumentReference => employeeDocumentReference.id)
-                                    .catch(error => {
-                                        throw new functions.https.HttpsError('internal', 'The employee record could not be created', error);
-                                    });
+    await admin.firestore()
+            .doc(`companies/${company.id}/employees/${user.uid}`)
+            .set({ 
+                uid: user.uid,
+                ...employeeData, 
+                __name: lower(employeeData.name),
+                enrolledCourses: {},
+                company: admin.firestore().doc(`companies/${company.id}`),
+                createdAt: new Date().valueOf(), 
+            })
+            .catch(error => {
+                throw new functions.https.HttpsError('internal', 'The employee record could not be created', error);
+            });
 
     // Generate passwordless sign-in link
-    await generateCompanyEmployeeSignInLink(company, employeeId);
+    await generateCompanyEmployeeSignInLink(company, user.uid);
 
     // Send welcome email
-    const business = functions.config().business.name;
+    const business = await resolveBusiness();
 
     await admin.firestore()
                 .collection('mail').add({

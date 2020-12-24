@@ -2,7 +2,121 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     match /{document=**} {
-      allow read, write: if true
+      allow write: if false;
+    }
+
+    match /__documentCounters/{documentCounter} {
+      allow read: if isAdmin() || (isHR() && (documentCounter == 'courses'));
+    }
+
+    match /companies/{companyId} {
+      allow read: if isAdmin() || isCompanyEmployeeOrHR(companyId);
+
+      match /notifications/{notificationId} {
+        allow read: if isCompanyHR(companyId);
+      }
+
+      match /employees/{uid} {
+        allow read: if isAdmin() || isCompanyHR(companyId) || (isEmployee() && isUser(uid));
+
+        match /notifications/{notificationId} {
+          allow read: if (isEmployee() && isUser(uid));
+        }
+      }
+    }
+    
+    match /courses/{courseId} {
+      allow read: if true;
+
+      match /content/{moduleIndex_lessonIndex} {
+        allow read: if isAdmin() || (isEmployeeOrHR() && canAccessCourseContent(courseId, moduleIndex_lessonIndex));
+      }
+    }
+
+    match /draftCourses/{draftCourse} {
+      allow read: if isAdmin();
+    }
+
+    match /courseRequests/courseRequest} {
+      allow read: if isAdmin();
+    }
+
+    match /plans/{planId} {
+      allow read: if true;
+    }
+
+    match /customPlanRequests/{customPlanRequest} {
+      allow read: if isAdmin();
+    }
+
+    match /notifications/{notificationId} {
+      allow read: if isAdmin();
+    }
+
+    match /settings/{setting} {
+      allow read: if true;
+    }
+
+    match /mail/{mailId} {
+      allow read: if false;
+    }
+
+    function isUser(uid) {
+      return request.auth.uid == uid;
+    }
+
+    function isAdmin() {
+      return request.auth.token.get('accessLevel', null) == 'admin';
+    }
+
+    function isHR() {
+      return request.auth.token.get('accessLevel', null) == 'hr';
+    }
+
+    function isEmployee() {
+      return request.auth.token.get('accessLevel', null) == 'employee';
+    }
+
+    function isEmployeeOrHR() {
+      return isEmployee() || isHR();
+    }
+
+    function belongsToCompany(companyId) {
+      return request.auth.token.get('companyId', null) == companyId;
+    }
+
+    function isCompanyHR(companyId) {
+      return isHR() && belongsToCompany(companyId);
+    }
+
+    function isCompanyEmployee(companyId) {
+      return isEmployee() && belongsToCompany(companyId);
+    }
+
+    function isCompanyEmployeeOrHR(companyId) {
+      return isCompanyEmployee(companyId) || isCompanyHR(companyId);
+    }
+
+    function canAccessCourseContent(courseId, moduleIndex_lessonIndex) {
+      let moduleIndex = moduleIndex_lessonIndex.split('_')[0];
+      
+      let course = get(/databases/$(database)/documents/courses/$(courseId)).data;
+
+      let module = course.modules[moduleIndex];
+
+      let companyId = request.auth.token.get('companyId', null);
+
+      let company = get(/databases/$(database)/documents/companies/$(companyId)).data;
+
+      let companyHasAccessToCourses = company.accessToCoursesBlockedAt == null;
+
+      let companyPlan = get(company.plan).data;
+
+      let coursePath = /databases/$(database)/documents/courses/$(courseId);
+
+      let courseIsInCompanyPlan = companyPlan.courses.hasAll([coursePath]);
+
+      return module.canBePreviewed || (companyHasAccessToCourses && courseIsInCompanyPlan);
     }
   }
 }

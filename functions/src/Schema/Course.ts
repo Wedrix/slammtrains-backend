@@ -5,14 +5,30 @@ import { Video } from './Video';
 
 export const Lesson = Schema.object({
     title: Schema.string(),
-    durationInMinutes: Schema.number(),
-    canBePreviewed: Schema.boolean(),
+    durationInSeconds: Schema.number(),
     contentType: Schema.enum([
         'video',
         'html',
+        'questions',
     ]),
-    video: Video.nullable(),
-    html: Schema.string().nullable(),
+    content: Schema.unknown(),
+});
+
+export const Module = Schema.object({
+    name: Schema.string(),
+    lessons: Schema.array(Lesson),
+    canBePreviewed: Schema.boolean(),
+});
+
+export const Course = Schema.object({
+    id: Schema.string(),
+    name: Schema.string(),
+    __name: Schema.string(),
+    description: Schema.string(),
+    overview: Schema.string(),
+    thumbnail: Image,
+    modules: Schema.array(Module),
+    createdAt: Schema.number(),
 });
 
 export const Question = Schema.object({
@@ -27,26 +43,12 @@ export const Question = Schema.object({
     durationInSeconds: Schema.number(),
 });
 
-export const Module = Schema.object({
-    name: Schema.string(),
-    lessons: Schema.array(Lesson),
-    test: Schema.object({
-        questions: Schema.array(Question),
-    }),
-});
+export const LessonContent = Schema.object({
+    video: Video,
+    html: Schema.string(),
+    questions: Schema.array(Question),
+})
+.partial();
 
-export const Course = Schema.object({
-    id: Schema.string(),
-    name: Schema.string(),
-    __name: Schema.string(),
-    description: Schema.string(),
-    overview: Schema.string(),
-    thumbnail: Image,
-    modules: Schema.array(Module),
-    createdAt: Schema.number(),
-});
-
-export type Lesson = Schema.infer<typeof Lesson>;
-export type Question = Schema.infer<typeof Question>;
-export type Module = Schema.infer<typeof Module>;
 export type Course = Schema.infer<typeof Course>;
+export type LessonContent = Schema.infer<typeof LessonContent>;

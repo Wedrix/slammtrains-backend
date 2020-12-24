@@ -3,19 +3,20 @@ import * as admin from 'firebase-admin';
 
 import { lower } from 'case';
 
-import { RequestedCourseData } from '../Schema/Data';
+import { CourseRequestData } from '../Schema/Data';
 import { Company } from '../Schema/Company';
 
-export default async (company: Company, requestedCourseData: RequestedCourseData) => {
+export default async (company: Company, courseRequestData: CourseRequestData) => {
     await admin.firestore()
-                .collection('requestedCourses')
+                .collection('courseRequests')
                 .add({
-                    ...requestedCourseData,
-                    __name: lower(requestedCourseData.name),
+                    ...courseRequestData,
+                    __companyName: lower(company.name),
+                    __courseName: lower(courseRequestData.courseName),
                     company: admin.firestore().doc(`/companies/${company.id}`),
                     createdAt: new Date().valueOf(),
                 })
                 .catch(error => {
-                    throw new functions.https.HttpsError('internal', 'Could not add the requested course document', error);
+                    throw new functions.https.HttpsError('internal', 'Could not add the course request document', error);
                 });
 };

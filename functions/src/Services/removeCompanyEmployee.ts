@@ -2,7 +2,7 @@ import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
 
 import { Company } from '../Schema/Company';
-import { resolveEmployee } from '../Helpers/ResolveDocuments';
+import { resolveBusiness, resolveEmployee } from '../Helpers/ResolveDocuments';
 
 export default async (company: Company, employeeId: string) => {
     const employee = await resolveEmployee(`companies/${company.id}/employees/${employeeId}`);
@@ -22,6 +22,8 @@ export default async (company: Company, employeeId: string) => {
                 throw new functions.https.HttpsError('internal', 'The employee record could not be deleted', error);
             });
 
+    const business = await resolveBusiness();
+
     // Send removal notification
     if (employee.email) {
         await admin.firestore()
@@ -30,7 +32,7 @@ export default async (company: Company, employeeId: string) => {
                     to: employee.email,
                     message: {
                         subject: `You've been removed from ${company.name}.`,
-                        html: `Sorry <strong>${employee.name}</strong>, you've been removed from ${functions.config().business.name} by an admin for <strong>${company.name}</strong>. 
+                        html: `Sorry <strong>${employee.name}</strong>, you've been removed from ${business.name} by an admin for <strong>${company.name}</strong>. 
                         <br/>Unfortunately, this means that you will no longer be able to sign in to your account and learn.
                         <br/>We hope to see you again in the near future.
                         <br/>Thank You.`,

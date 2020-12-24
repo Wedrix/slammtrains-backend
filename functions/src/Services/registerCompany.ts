@@ -6,25 +6,22 @@ import { lower } from 'case';
 import axios from 'axios';
 
 import { CompanyData } from '../Schema/Data';
+import { resolveBusiness } from '../Helpers/ResolveDocuments';
 
 export default async (uid: string, companyData: CompanyData) => {
+    const $config = functions.config();
+
     const user = await admin.auth()
                             .getUser(uid);
 
-    const $config = functions.config();
+    if (!user.customClaims?.companyId) {
+        throw new functions.https.HttpsError('failed-precondition', 'The user is not associated with any company.');
+    }
 
-    // Register User
-    const companyId = admin.firestore()
-                            .collection('companies')
-                            .doc()
-                            .id;
-
-    const companyDomain = functions.config().app.domain;
-
-    const emailId = (`${companyId}@${companyDomain}`).toLowerCase();
+    const emailId = (`${user.customClaims.companyId}@${$config.app.domain}`).toLowerCase();
 
     await admin.firestore()
-                .doc(`companies/${companyId}`)
+                .doc(`companies/${user.customClaims.companyId}`)
                 .set({
                     ...companyData,
                     __name: lower(companyData.name),
@@ -37,21 +34,23 @@ export default async (uid: string, companyData: CompanyData) => {
                     plan: admin.firestore().doc(`plans/${companyData.plan}`),
                     employeesTotalCount: 0,
                     subscription: null,
-                    accessBlockedAt: null,
+                    revenue: {},
+                    blockedAt: null,
+                    accessToCoursesBlockedAt: null,
                     createdAt: new Date().valueOf(),
                 });
 
     // Send Welcome Email
     if (user.email) {
-        const businessName = $config.business.name;
+        const business = await resolveBusiness();
 
         await admin.firestore()
                     .collection('mail')
                     .add({
                         to: user.email,
                         message: {
-                            subject: `Welcome to ${businessName}!`,
-                            text:   `Welcome to ${businessName}! We hope you find great value in our products and services.`,
+                            subject: `Welcome to ${business.name}!`,
+                            text:   `Welcome to ${business.name}! We hope you find great value in our products and services.`,
                         },
                     })
                     .catch(error => {
@@ -60,13 +59,11 @@ export default async (uid: string, companyData: CompanyData) => {
     }
 
     // Create Paystack Customer
-    const paystack = functions.config().paystack;
-
-    await axios.post(`${paystack.base_uri}/customer`, {
+    await axios.post(`${$config.paystack.base_uri}/customer`, {
                     email: emailId,
                 }, {
                     headers: {
-                        Authorization: `Bearer ${paystack.secret_key}`,
+                        Authorization: `Bearer ${$config.paystack.secret_key}`,
                     },
                 })
                 .catch(error => {
