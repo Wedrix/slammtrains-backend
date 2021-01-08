@@ -34,7 +34,7 @@ export default async (companyId: string) => {
                     to: company.hr.email,
                     message: {
                         subject: `Your account has been blocked!`,
-                        html: `Hello ${company.hr.name},
+                        html: `Hello ${company.hr.firstName},
                             <br/>Your account has been blocked by the admin.
                             Unfortunately, this means you will no longer be able to log in to your account.
                             <br/>

@@ -21,7 +21,7 @@ export default async (companyId: string) => {
                 to: company.hr.email,
                 message: {
                     subject: `Your access to courses has been restored!`,
-                    html: `Hello ${company.hr.name},
+                    html: `Hello ${company.hr.firstName},
                         <br/>Your access to courses has been restored. Your employees can now freely access the courses in your plan anytime. 
                         <br/>Cheers!`,
                 },

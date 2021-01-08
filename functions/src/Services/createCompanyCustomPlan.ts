@@ -63,7 +63,7 @@ export default async (planData: PlanData, companyId: string) => {
                 to: company.hr.email,
                 message: {
                     subject: `Plan changed to custom plan`,
-                    html: `Hello ${company.hr.name},
+                    html: `Hello ${company.hr.firstName},
                         <br/>Your active plan has been changed to a custom plan as per your request.
                         <br/>To activate this plan, kindly log in, navigate to Settings -> Billing and click on the 'Activate Plan' button if billing is enabled for the plan.
                         <br/>Thank You.`,

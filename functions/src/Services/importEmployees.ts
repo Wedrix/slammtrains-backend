@@ -66,7 +66,7 @@ export default async (filePath: string, companyId: string) => {
                     to: company.hr.email,
                     message: {
                         subject: `Some records could not be imported`,
-                        html: `Hello ${company.hr.name},
+                        html: `Hello ${company.hr.firstName},
                             <br/>Your recent employees import failed on some records. Kindly view the breakdown below:
                             <br/>
                             <br/>

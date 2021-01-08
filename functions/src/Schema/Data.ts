@@ -60,9 +60,8 @@ export const CourseData = Schema.object({
 export const CourseDraftData = CourseData.partial();
 
 export const HRData = Schema.object({
-    email: Schema.string(),
-    password: Schema.string(),
-    displayName: Schema.string(),
+    firstName: Schema.string(),
+    lastName: Schema.string(),
 });
 
 export const CompanyData = Schema.object({

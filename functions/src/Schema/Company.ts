@@ -5,8 +5,9 @@ import { Address } from './Address';
 import { Subscription } from './Subscription';
 
 export const HR = Schema.object({
+    firstName: Schema.string(),
+    lastName: Schema.string(),
     email: Schema.string(),
-    name: Schema.string(),
     uid: Schema.string(),
 });
 

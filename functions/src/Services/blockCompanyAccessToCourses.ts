@@ -23,7 +23,7 @@ export default async (companyId: string) => {
                 to: company.hr.email,
                 message: {
                     subject: `Your access to courses has been blocked!`,
-                    html: `Hello ${company.hr.name},
+                    html: `Hello ${company.hr.firstName},
                         <br/>Your access to courses has been blocked due to subscription expiry. 
                         Unfortunately, this means your employees will no longer have access to the courses in your plan.
                         <br/>To restore access, kindly proceed with the following steps:

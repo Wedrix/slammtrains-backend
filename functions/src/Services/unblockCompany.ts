@@ -32,7 +32,7 @@ export default async (companyId: string) => {
                     to: company.hr.email,
                     message: {
                         subject: `Your account has been restored!`,
-                        html: `Hello ${company.hr.name},
+                        html: `Hello ${company.hr.firstName},
                             <br/>Your account has been restored by the admin. 
                             You can now log in to your account anytime.
                             <br/> 

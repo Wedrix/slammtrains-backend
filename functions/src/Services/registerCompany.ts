@@ -27,7 +27,8 @@ export default async (uid: string, companyData: CompanyData) => {
                     __name: lower(companyData.name),
                     emailId,
                     hr: {
-                        name: user.displayName,
+                        firstName: user.displayName?.split(' ')[0],
+                        lastName: user.displayName?.split(' ')[1],
                         email: user.email,
                         uid: user.uid,
                     },

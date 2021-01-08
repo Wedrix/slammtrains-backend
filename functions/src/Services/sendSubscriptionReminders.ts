@@ -47,7 +47,7 @@ export default async () => {
                                     to: company.hr.email,
                                     message: {
                                         subject: `Your subscription expires in ${daysLeft} days!`,
-                                        html: `Hello ${company.hr.name},
+                                        html: `Hello ${company.hr.firstName},
                                             <br/>Your subscription will expire in ${daysLeft} day(s).
                                             <br/>
                                             <br/>To prevent any disruption of service, kindly take the following steps to renew your subscription:

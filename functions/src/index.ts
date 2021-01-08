@@ -55,15 +55,23 @@ interface Auth {
     token: admin.auth.DecodedIdToken;
 }
 
-const authorizeRequest = async (auth: Auth | undefined, accessLevel: 'admin' | 'hr' | 'employee') => {
+const authorizeRequest = async (auth: Auth | undefined, accessLevel: 'admin' | 'hr' | 'employee' | boolean = true) => {
     if (!auth) {
-        throw new functions.https.HttpsError('permission-denied', 'You are not authorized to call this function');
+        throw new functions.https.HttpsError('permission-denied', 'Unauthenticated');
     }
 
-    const customClaims = (await admin.auth().getUser(auth.uid)).customClaims;
+    const user = await admin.auth().getUser(auth.uid);
 
-    if (customClaims?.accessLevel !== accessLevel) {
-        throw new functions.https.HttpsError('permission-denied', 'You are not authroized to call this function');
+    if (!user.emailVerified) {
+        throw new functions.https.HttpsError('permission-denied', 'Unauthenticated');
+    }
+
+    if (accessLevel !== true) {
+        const customClaims = user.customClaims;
+    
+        if (customClaims?.accessLevel !== ((accessLevel === false) ? undefined : accessLevel)) {
+            throw new functions.https.HttpsError('permission-denied', 'You are not authroized to call this function');
+        }
     }
 };
 
@@ -157,13 +165,17 @@ exports.setAdmin = functions.https.onCall(async () => {
     await setAdmin();
 });
 
-exports.signUpHR = functions.https.onCall(async data => {
-    const hrData = await HRData.parseAsync(data.hrData)
-                            .catch(error => {
-                                throw new functions.https.HttpsError('invalid-argument', 'The hr data is invalid.', error);
-                            });
+exports.signUpHR = functions.https.onCall(async (data, context) => {
+    await authorizeRequest(context.auth, false);
 
-    await signUpHR(hrData);
+    if (context.auth?.uid) {
+        const hrData = await HRData.parseAsync(data.hrData)
+                                .catch(error => {
+                                    throw new functions.https.HttpsError('invalid-argument', 'The hr data is invalid.', error);
+                                });
+    
+        await signUpHR(context.auth.uid, hrData);
+    }
 });
 
 exports.registerCompany = functions.https.onCall(async (data, context) => {
