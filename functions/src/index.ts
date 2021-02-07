@@ -21,6 +21,7 @@ import setCompanyPlan from './Services/setCompanyPlan';
 import sendSubscriptionReminders from './Services/sendSubscriptionReminders';
 import enforceBilling from './Services/enforceBilling';
 import addEmployeeCompletedLesson from './Services/addEmployeeCompletedLesson';
+import addEmployeeAskedQuestion from './Services/addEmployeeAskedQuestion';
 import fetchCompanyTransactions from './Services/fetchCompanyTransactions';
 import requestCourse from './Services/requestCourse';
 import removeCourseRequest from './Services/removeCourseRequest';
@@ -48,6 +49,7 @@ import {
     TransactionsPaginationData,
     EmailData,
     CustomPlanRequestData,
+    AskedQuestionData,
 } from './Schema/Data';
 
 interface Auth {
@@ -443,6 +445,19 @@ exports.addEmployeeCompletedLesson = functions.https.onCall(async (data, context
                                                         });
 
     await addEmployeeCompletedLesson(employee, completedLessonData);
+});
+
+exports.addEmployeeAskedQuestion = functions.https.onCall(async (data, context) => {
+    await authorizeRequest(context.auth, 'employee');
+
+    const employee = await resolveEmployee(context.auth);
+
+    const askedQuestionData = await AskedQuestionData.parseAsync(data.askedQuestionData)
+                                                    .catch(error => {
+                                                        throw new functions.https.HttpsError('invalid-argument', 'The asekd question data is invalid', error);
+                                                    });
+
+    await addEmployeeAskedQuestion(employee, askedQuestionData);
 });
 
 exports.importEmployeesOnCSVUpload = functions.storage.object().onFinalize(async object => {

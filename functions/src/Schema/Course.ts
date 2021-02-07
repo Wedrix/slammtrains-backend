@@ -29,6 +29,8 @@ export const Course = Schema.object({
     thumbnail: Image,
     modules: Schema.array(Module),
     createdAt: Schema.number(),
+    ratingsSumTotal: Schema.number(),
+    reviewsSumTotal: Schema.number(),
 });
 
 export const Question = Schema.object({

@@ -108,6 +108,11 @@ export const CustomPlanRequestData = Schema.object({
     essentialCoursesIds: Schema.array(Schema.string()),
 });
 
+export const AskedQuestionData = Schema.object({
+    body: Schema.string(),
+    referencedLesson: Schema.string().nullable(),
+});
+
 export type EmployeeData = Schema.infer<typeof EmployeeData>;
 export type PlanData = Schema.infer<typeof PlanData>;
 export type CompanyData = Schema.infer<typeof CompanyData>;
@@ -119,3 +124,4 @@ export type TransactionsPaginationData = Schema.infer<typeof TransactionsPaginat
 export type CourseRequestData = Schema.infer<typeof CourseRequestData>;
 export type EmailData = Schema.infer<typeof EmailData>;
 export type CustomPlanRequestData = Schema.infer<typeof CustomPlanRequestData>;
+export type AskedQuestionData = Schema.infer<typeof AskedQuestionData>;

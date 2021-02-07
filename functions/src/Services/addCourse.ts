@@ -45,6 +45,8 @@ export default async (courseData: CourseData) => {
                     ...data,
                     __name: lower(data.name),
                     createdAt: new Date().valueOf(),
+                    ratingsSumTotal: 0,
+                    reviewsSumTotal: 0,
                 })
                 .catch(error => {
                     throw new functions.https.HttpsError('internal', 'The course record could not be added', error);
