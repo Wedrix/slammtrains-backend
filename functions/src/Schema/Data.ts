@@ -110,7 +110,18 @@ export const CustomPlanRequestData = Schema.object({
 
 export const AskedQuestionData = Schema.object({
     body: Schema.string(),
-    referencedLesson: Schema.string().nullable(),
+    referencedLesson: Schema.object({
+        courseName: Schema.string(),
+        moduleName: Schema.string(),
+        lessonTitle: Schema.string(),
+    })
+    .nullable(),
+});
+
+export const ReviewData = Schema.object({
+    body: Schema.string(),
+    rating: Schema.number(),
+    courseId: Schema.string(),
 });
 
 export type EmployeeData = Schema.infer<typeof EmployeeData>;
@@ -125,3 +136,4 @@ export type CourseRequestData = Schema.infer<typeof CourseRequestData>;
 export type EmailData = Schema.infer<typeof EmailData>;
 export type CustomPlanRequestData = Schema.infer<typeof CustomPlanRequestData>;
 export type AskedQuestionData = Schema.infer<typeof AskedQuestionData>;
+export type ReviewData = Schema.infer<typeof ReviewData>;

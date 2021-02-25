@@ -33,6 +33,8 @@ import requestCustomPlan from './Services/requestCustomPlan';
 import removeCustomPlanRequest from './Services/removeCustomPlanRequest';
 import updatePlan from './Services/updatePlan';
 import deletePlan from './Services/deletePlan';
+import addCourseReview from './Services/addCourseReview';
+import updateCourseReview from './Services/updateCourseReview';
 
 import * as Schema from 'zod';
 import * as ResolveDocuments from './Helpers/ResolveDocuments';
@@ -50,6 +52,7 @@ import {
     EmailData,
     CustomPlanRequestData,
     AskedQuestionData,
+    ReviewData,
 } from './Schema/Data';
 
 interface Auth {
@@ -454,10 +457,36 @@ exports.addEmployeeAskedQuestion = functions.https.onCall(async (data, context) 
 
     const askedQuestionData = await AskedQuestionData.parseAsync(data.askedQuestionData)
                                                     .catch(error => {
-                                                        throw new functions.https.HttpsError('invalid-argument', 'The asekd question data is invalid', error);
+                                                        throw new functions.https.HttpsError('invalid-argument', 'The asked question data is invalid', error);
                                                     });
 
     await addEmployeeAskedQuestion(employee, askedQuestionData);
+});
+
+exports.addCourseReview = functions.https.onCall(async (data, context) => {
+    await authorizeRequest(context.auth, 'employee');
+
+    const employee = await resolveEmployee(context.auth);
+
+    const reviewData = await ReviewData.parseAsync(data.reviewData)
+                                        .catch(error => {
+                                            throw new functions.https.HttpsError('invalid-argument', 'The review data is invalid', error);
+                                        });
+    
+    await addCourseReview(employee, reviewData);
+});
+
+exports.updateCourseReview = functions.https.onCall(async (data, context) => {
+    await authorizeRequest(context.auth, 'employee');
+
+    const employee = await resolveEmployee(context.auth);
+
+    const reviewData = await ReviewData.parseAsync(data.reviewData)
+                                            .catch(error => {
+                                                throw new functions.https.HttpsError('invalid-argument', 'The updated review data is invalid', error);
+                                            });
+    
+    await updateCourseReview(employee, reviewData);
 });
 
 exports.importEmployeesOnCSVUpload = functions.storage.object().onFinalize(async object => {

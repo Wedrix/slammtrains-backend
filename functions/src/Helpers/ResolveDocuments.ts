@@ -6,6 +6,7 @@ import { Employee } from '../Schema/Employee';
 import { Plan } from '../Schema/Plan';
 import { Course } from '../Schema/Course';
 import { Business } from '../Schema/Business';
+import { Review } from '../Schema/Review';
 
 const fetchDocument = async (documentPath: string | admin.firestore.DocumentReference) => {
     const documentReference = (typeof documentPath === 'string') ? admin.firestore().doc(documentPath) : documentPath;
@@ -54,4 +55,10 @@ export const resolveCourse = async (documentPath: string | admin.firestore.Docum
     const document = await fetchDocument(documentPath);
     
     return Course.parseAsync(document);
+};
+
+export const resolveReview = async (documentPath: string | admin.firestore.DocumentReference) => {
+    const document = await fetchDocument(documentPath);
+
+    return Review.parseAsync(document);
 };
