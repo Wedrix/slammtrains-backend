@@ -578,6 +578,22 @@ exports.decrementCoursesTotalCountOnDelete = functions.firestore
                                                                 .update('courses', admin.firestore.FieldValue.increment(-1));
                                                     });
 
+exports.incrementCourseDraftsTotalCountOnCreate = functions.firestore
+                                                        .document(`/courseDrafts/{courseDraftId}`)
+                                                        .onCreate(async () => {
+                                                            await admin.firestore()
+                                                                    .doc(`documentCounters/index`)
+                                                                    .update('courseDrafts', admin.firestore.FieldValue.increment(1));
+                                                        });
+
+exports.decrementCourseDraftsTotalCountOnDelete = functions.firestore
+                                                        .document(`/courseDrafts/{courseDraftId}`)
+                                                        .onDelete(async () => {
+                                                            await admin.firestore()
+                                                                    .doc(`documentCounters/index`)
+                                                                    .update('courseDrafts', admin.firestore.FieldValue.increment(-1));
+                                                        });
+
 exports.incrementPlansTotalCountOnCreate = functions.firestore
                                                     .document(`/plans/{planId}`)
                                                     .onCreate(async () => {
