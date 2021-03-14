@@ -57,8 +57,6 @@ export const CourseData = Schema.object({
     ),
 });
 
-export const CourseDraftData = CourseData.partial();
-
 export const HRData = Schema.object({
     firstName: Schema.string(),
     lastName: Schema.string(),
@@ -129,7 +127,6 @@ export type PlanData = Schema.infer<typeof PlanData>;
 export type CompanyData = Schema.infer<typeof CompanyData>;
 export type HRData = Schema.infer<typeof HRData>;
 export type CourseData = Schema.infer<typeof CourseData>;
-export type CourseDraftData = Schema.infer<typeof CourseDraftData>;
 export type CompletedLessonData = Schema.infer<typeof CompletedLessonData>;
 export type TransactionsPaginationData = Schema.infer<typeof TransactionsPaginationData>;
 export type CourseRequestData = Schema.infer<typeof CourseRequestData>;

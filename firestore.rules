@@ -1,6 +1,10 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    match /draftCourses/{draftCourse} {
+      allow write, read: if isAdmin();
+    }
+
     match /{document=**} {
       allow write: if false;
     }
@@ -31,10 +35,6 @@ service cloud.firestore {
       match /content/{moduleIndex_lessonIndex} {
         allow read: if isAdmin() || (isEmployeeOrHR() && canAccessCourseContent(courseId, moduleIndex_lessonIndex));
       }
-    }
-
-    match /draftCourses/{draftCourse} {
-      allow read: if isAdmin();
     }
 
     match /courseRequests/courseRequest} {

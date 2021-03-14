@@ -15,7 +15,6 @@ import removeCompanyEmployee from './Services/removeCompanyEmployee';
 import processPaystackEvents from './processPaystackEvents';
 import addPlan from './Services/addPlan';
 import addCourse from './Services/addCourse';
-import addCourseDraft from './Services/addCourseDraft';
 import createCompanyCustomPlan from './Services/createCompanyCustomPlan';
 import setCompanyPlan from './Services/setCompanyPlan';
 import sendSubscriptionReminders from './Services/sendSubscriptionReminders';
@@ -45,7 +44,6 @@ import {
     CompanyData,
     HRData,
     CourseData,
-    CourseDraftData,
     CourseRequestData,
     CompletedLessonData,
     TransactionsPaginationData,
@@ -369,17 +367,6 @@ exports.addCourse = functions.https.onCall(async (data, context) => {
                                         });
 
     await addCourse(courseData);
-});
-
-exports.addCourseDraft = functions.https.onCall(async (data, context) => {
-    await authorizeRequest(context.auth, 'admin');
-
-    const courseDraftData = await CourseDraftData.parseAsync(data.draftCourseData)
-                                                .catch(error => {
-                                                    throw new functions.https.HttpsError('invalid-argument', 'The draft course data is invalid', error);
-                                                });
-
-    await addCourseDraft(courseDraftData);
 });
 
 exports.blockCompany = functions.https.onCall(async (data, context) => {
